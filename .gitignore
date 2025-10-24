@@ -1,0 +1,22 @@
+# No subir secretos
+.env
+.env.*.local
+
+# Archivos pesados y temporales
+*.zip
+*.tar
+*.tar.gz
+*.bak
+*.log
+
+# Carpetas generadas
+**/data/
+**/tmp/
+volumes/
+docker-data/
+
+# Sistema / IDE
+.DS_Store
+.vscode/
+.idea/
+

@@ -1,0 +1,65 @@
+services:
+  db:
+    image: postgres:14.11
+    container_name: postgres-redmine  
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+      TZ: ${TZ}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} -h 127.0.0.1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redmine:
+    image: redmine:5.1.3-alpine
+    container_name: redmine
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    environment:
+      REDMINE_DB_POSTGRES: db
+      REDMINE_DB_DATABASE: ${POSTGRES_DB}
+      REDMINE_DB_USERNAME: ${POSTGRES_USER}
+      REDMINE_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      REDMINE_DB_PORT: 5432
+      REDMINE_SECRET_KEY_BASE: ${REDMINE_SECRET_KEY_BASE}
+      TZ: ${TZ}
+
+      # SMTP (ajusta tus credenciales/host/puerto/SSL)
+      REDMINE_EMAIL__DELIVERY__METHOD: smtp
+      REDMINE_EMAIL__SMTP__ADDRESS: ${SMTP_ADDRESS}
+      REDMINE_EMAIL__SMTP__PORT: ${SMTP_PORT}
+      REDMINE_EMAIL__SMTP__DOMAIN: ${SMTP_DOMAIN}
+      REDMINE_EMAIL__SMTP__AUTHENTICATION: login
+      REDMINE_EMAIL__SMTP__USER_NAME: ${SMTP_USER}
+      REDMINE_EMAIL__SMTP__PASSWORD: ${SMTP_PASS}
+      REDMINE_EMAIL__SMTP__ENABLE_STARTTLS_AUTO: "true"
+      REDMINE_EMAIL__SMTP__SSL: "false"
+
+    ports:
+      - "3000:3000"   # si vas a poner Nginx/Traefik delante, podés quitar esto y publicar el proxy
+    volumes:
+      - redmine_files:/usr/src/redmine/files
+      - redmine_plugins:/usr/src/redmine/plugins
+      - redmine_themes:/usr/src/redmine/public/themes
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/login >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    stop_grace_period: 60s
+
+volumes:
+  db_data:
+  redmine_files:
+  redmine_plugins:
+  redmine_themes:
+
